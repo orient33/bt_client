@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Process;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -104,6 +105,8 @@ public class Connect extends Activity {
 	}
 
 	private void resetUI(){
+		TEST_COUNT = Integer.MAX_VALUE;
+		DELAY = 1000;
 		mStart.setEnabled(true);
 		mEditDelay.setEnabled(true);
 		mEditCount.setEnabled(true);
@@ -133,10 +136,19 @@ public class Connect extends Activity {
 	}
 
 	@Override
+	public void onBackPressed() {
+		if (mTask != null && mTask.isAlive()) {
+			Toast.makeText(this, "连接未停，不能退出", 0).show();
+		} else
+			super.onBackPressed();
+	}
+
+	@Override
 	protected void onDestroy() {
 		if(mTask!=null)
 		mTask.canceConnect();
 		super.onDestroy();
+		Process.killProcess(Process.myPid());
 	}
 
 	class ConnectTask extends Thread {

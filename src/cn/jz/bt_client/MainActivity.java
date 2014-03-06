@@ -18,6 +18,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
@@ -31,6 +32,15 @@ public class MainActivity extends Activity {
 		mListView = (ListView)findViewById(R.id.listview);
 		
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+		if (mBluetoothAdapter == null) {
+			Toast.makeText(this, "设备不支持蓝牙", 1).show();
+			finish();
+		}
+
+		if (!mBluetoothAdapter.isEnabled()) {
+			Toast.makeText(this, "请打开蓝牙", 1).show();
+			finish();
+		}
 		Set<BluetoothDevice>  pairedDevices = mBluetoothAdapter.getBondedDevices();
 		Iterator<BluetoothDevice> its =pairedDevices.iterator();
 		while(its.hasNext()){
