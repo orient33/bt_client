@@ -163,7 +163,8 @@ public class Connect extends Activity {
 			while (runing && TEST_COUNT > 0) {
 				TEST_COUNT--;
 				socket = null;
-				
+				// Cancel discovery because it will slow down the connection
+				BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
 				synchronized (this) {
 					//create local connsoket.
 					try {	
