@@ -1,6 +1,7 @@
 package cn.jz.bt_client;
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.UUID;
 
 import android.app.Activity;
@@ -84,6 +85,10 @@ public class Connect extends Activity {
 					mCountView.setText(mOkCount + " \n " + mFailedCount);
 					break;
 				case FAILED:
+					if(0==msg.arg1){
+						mLogView.setText( msg.obj.toString());
+						break;
+					}
 					mFailedCount++;
 					mCountView.setText(mOkCount + " \n " + mFailedCount);
 					mLogView.setText(msg.arg1 + "}" + msg.obj.toString());
@@ -186,9 +191,14 @@ public class Connect extends Activity {
 				synchronized (this) {
 					//create local connsoket.
 					try {
-						int r = DELAY;
-						if (DELAY_TO > DELAY)
-							r = DELAY+((int) Math.random()) % (DELAY_TO - DELAY);
+						int r = Math.max(1, DELAY);
+						if (DELAY_TO > DELAY){
+							Random rand= new Random();
+							rand.setSeed(System.currentTimeMillis());
+							int random=Math.abs(rand.nextInt());
+							r += (random) % (DELAY_TO - DELAY);
+						}
+						display(0,r+" [s]");
                         try {					
 							wait(r * 1000);
                         } catch (InterruptedException e) {
