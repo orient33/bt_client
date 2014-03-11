@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -31,6 +32,7 @@ public class Connect extends Activity {
 	static int DEFAULT_DELAY = 1;
 	static int DELAY = DEFAULT_DELAY, DELAY_TO = -1;
 	static int TEST_COUNT=Integer.MAX_VALUE;
+	private boolean SECURE_CONNECT = false;
 	BluetoothDevice mBluetoothDevice;
 	ConnectTask mTask;
 	TextView mCountView,mLogView;
@@ -182,7 +184,8 @@ public class Connect extends Activity {
 
 		public void run(){
 			BluetoothSocket socket = null;
-			
+
+			Log.d("sw2df", " {client}SECURE_CONNECT is "+ SECURE_CONNECT);
 			while (runing && TEST_COUNT > 0) {
 				TEST_COUNT--;
 				socket = null;
@@ -207,11 +210,20 @@ public class Connect extends Activity {
                         	display(154,e.toString());
                         	break;
                         }
-						
-						socket = mBluetoothDevice
-								.createRfcommSocketToServiceRecord(UUID
-										.fromString(MY_UUID));
-					  
+						if (!SECURE_CONNECT
+								&& android.os.Build.VERSION.SDK_INT >= 10) {
+							socket = mBluetoothDevice
+									.createInsecureRfcommSocketToServiceRecord(UUID
+											.fromString(MY_UUID));
+						} else {
+							if (!SECURE_CONNECT
+									&& android.os.Build.VERSION.SDK_INT < 10) {
+								loge("it is not a secure_connect , but SDK Level < 10, and then run secure connect");
+							}
+							socket = mBluetoothDevice
+									.createRfcommSocketToServiceRecord(UUID
+											.fromString(MY_UUID));
+						}
 					    	
 						} catch (IOException ee) {
 							loge("164]" + ee);
