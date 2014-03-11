@@ -27,13 +27,14 @@ public class Connect extends Activity {
 	static final int CONNECTING = 10;//正在连接
 	static final int CLOSE = 11;	//socket关闭
 	static final int OVER = 12; //线程结束
-	static int DELAY = 1000;
+	static int DEFAULT_DELAY = 1;
+	static int DELAY = DEFAULT_DELAY, DELAY_TO = -1;
 	static int TEST_COUNT=Integer.MAX_VALUE;
 	BluetoothDevice mBluetoothDevice;
 	ConnectTask mTask;
 	TextView mCountView,mLogView;
 	TextView mState;
-	EditText mEditCount,mEditDelay;
+	EditText mEditCount,mEditDelayFrom,mEditDelayTo;
 	Button mStart,mStop;
 	String mac;
 	int mOkCount,mFailedCount;
@@ -49,9 +50,11 @@ public class Connect extends Activity {
 		mLogView = (TextView) findViewById(R.id.log);
 		mState = (TextView) findViewById(R.id.state);
 		mEditCount = (EditText)findViewById(R.id.test_count);
-		mEditDelay = (EditText)findViewById(R.id.delay);
+		mEditDelayFrom = (EditText)findViewById(R.id.delay_from);
+		mEditDelayTo = (EditText)findViewById(R.id.delay_to);
 		mStart=(Button)findViewById(R.id.start);
 		mStop = (Button)findViewById(R.id.stop);
+		mStop.setEnabled(false);
 		mStart.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View arg0) {
 				startTest();
@@ -106,28 +109,43 @@ public class Connect extends Activity {
 
 	private void resetUI(){
 		TEST_COUNT = Integer.MAX_VALUE;
-		DELAY = 1000;
+		DELAY = DEFAULT_DELAY;
+		DELAY_TO = -1;
+		mStop.setEnabled(false);
 		mStart.setEnabled(true);
-		mEditDelay.setEnabled(true);
+		mEditDelayFrom.setEnabled(true);
+		mEditDelayTo.setEnabled(true);
 		mEditCount.setEnabled(true);
-		mEditDelay.getEditableText().clear();
+		mEditDelayFrom.getEditableText().clear();
+		mEditDelayTo.getEditableText().clear();
 		mEditCount.getEditableText().clear();
 	}
 	private void startTest(){
 		try{
 			TEST_COUNT = Integer.parseInt(mEditCount.getEditableText().toString());
-			DELAY = Integer.parseInt(mEditDelay.getEditableText().toString());
+		}catch(Exception e){
+		}
+		try{
+			DELAY = Integer.parseInt(mEditDelayFrom.getEditableText().toString());
+		}catch(Exception e){
+		}
+		try{
+			DELAY_TO = Integer.parseInt(mEditDelayTo.getEditableText().toString());
 		}catch(Exception e){
 		}
 		mLogView.setText("");
 		mOkCount = mFailedCount = 0;
+		mHandler.sendEmptyMessage(INIT);
 		mTask = new ConnectTask();
 		mTask.start();
+		mStop.setEnabled(true);
 		mStart.setEnabled(false);
-		mEditDelay.setEnabled(false);
+		mEditDelayFrom.setEnabled(false);
+		mEditDelayTo.setEnabled(false);
 		mEditCount.setEnabled(false);
 	}
 	private void stopTest(){
+		if(null!=mTask)
 		mTask.canceConnect();
 	}
 	@Override
@@ -167,12 +185,15 @@ public class Connect extends Activity {
 				BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
 				synchronized (this) {
 					//create local connsoket.
-					try {	
-						
+					try {
+						int r = DELAY;
+						if (DELAY_TO > DELAY)
+							r = DELAY+((int) Math.random()) % (DELAY_TO - DELAY);
                         try {					
-						   wait(DELAY);
+							wait(r * 1000);
                         } catch (InterruptedException e) {
-                        	loge("InterruptedException");
+                        	loge("154] InterruptedException");
+							e.printStackTrace();
                         	display(154,e.toString());
                         	break;
                         }
@@ -184,6 +205,7 @@ public class Connect extends Activity {
 					    	
 						} catch (IOException ee) {
 							loge("164]" + ee);
+							ee.printStackTrace();
 							display(164,ee.toString());
 							break;
 					   }
@@ -197,6 +219,7 @@ public class Connect extends Activity {
 							mHandler.sendEmptyMessage(SUCCESS);							
 						} catch (IOException ee) {
 							loge("176]"+ee);
+							ee.printStackTrace();
 							display(176,ee.toString());
 							success = 0;
 							break;
@@ -218,6 +241,7 @@ public class Connect extends Activity {
 				socket.close();	
 			} catch (IOException e) {
 				loge("196]" + e.toString());
+				e.printStackTrace();
 				display(196,e.toString());
 			}
 		}

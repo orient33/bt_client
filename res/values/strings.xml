@@ -6,7 +6,8 @@
     <string name="count">连接成功次数:\n连接失败次数:</string>
     <string name="paired">已配对设备</string>
     <string name="hint_count">连接次数,默认无限</string>
-	<string name="hint_delay">连接间隔(ms),默认1秒</string>
+	<string name="hint_delay_from">间隔(s)From</string>
+	<string name="hint_delay_to">间隔(s) To</string>
 	<string name="start">开始</string>
 	<string name="stop">停止</string>
 </resources>

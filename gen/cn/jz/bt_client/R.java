@@ -20,15 +20,16 @@ public final class R {
         public static final int ic_launcher=0x7f020000;
     }
     public static final class id {
-        public static final int action_settings=0x7f08000a;
-        public static final int count=0x7f080006;
-        public static final int delay=0x7f080004;
-        public static final int layout1=0x7f080005;
+        public static final int action_settings=0x7f08000b;
+        public static final int count=0x7f080007;
+        public static final int delay_from=0x7f080004;
+        public static final int delay_to=0x7f080005;
+        public static final int layout1=0x7f080006;
         public static final int layout2=0x7f080000;
-        public static final int listview=0x7f080009;
-        public static final int log=0x7f080008;
+        public static final int listview=0x7f08000a;
+        public static final int log=0x7f080009;
         public static final int start=0x7f080001;
-        public static final int state=0x7f080007;
+        public static final int state=0x7f080008;
         public static final int stop=0x7f080002;
         public static final int test_count=0x7f080003;
     }
@@ -44,10 +45,11 @@ public final class R {
         public static final int app_name=0x7f050000;
         public static final int count=0x7f050002;
         public static final int hint_count=0x7f050004;
-        public static final int hint_delay=0x7f050005;
+        public static final int hint_delay_from=0x7f050005;
+        public static final int hint_delay_to=0x7f050006;
         public static final int paired=0x7f050003;
-        public static final int start=0x7f050006;
-        public static final int stop=0x7f050007;
+        public static final int start=0x7f050007;
+        public static final int stop=0x7f050008;
     }
     public static final class style {
         /** 

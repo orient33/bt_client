@@ -41,12 +41,26 @@
                 android:hint="@string/hint_count"
                 android:inputType="number" />
 
-            <EditText
-                android:id="@+id/delay"
-                android:layout_width="match_parent"
+            <LinearLayout android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_delay"
-                android:inputType="number" />
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/delay_from"
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_delay_from"
+                    android:inputType="number" />
+                <EditText 
+                    android:id="@+id/delay_to"
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_delay_to"
+                    android:inputType="number"/>
+            </LinearLayout>
+
         </LinearLayout>
 
         <LinearLayout
