@@ -1,10 +1,10 @@
 package cn.jz.bt_client;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Random;
 import java.util.UUID;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -27,22 +27,24 @@ public class Connect extends Activity {
 	static final int SUCCESS = 1;	//连接成功
 	static final int FAILED = 9;	//连接失败了
 	static final int CONNECTING = 10;//正在连接
+	static final int Connected = 13;
 	static final int CLOSE = 11;	//socket关闭
 	static final int OVER = 12; //线程结束
 	static int DEFAULT_DELAY = 1;
 	static int DELAY = DEFAULT_DELAY, DELAY_TO = -1;
 	static int TEST_COUNT=Integer.MAX_VALUE;
 	private boolean SECURE_CONNECT = false;
+	private boolean useChanel=false;
 	BluetoothDevice mBluetoothDevice;
 	ConnectTask mTask;
 	TextView mCountView,mLogView;
 	TextView mState;
 	EditText mEditCount,mEditDelayFrom,mEditDelayTo;
-	Button mStart,mStop;
+	Button mStart,mStop,mUnit,mMethod;
 	String mac;
 	int mOkCount,mFailedCount;
 	Handler mHandler;
-	final String s1="connecting......",
+	final String s1="connecting......",s11="connected , read()...",
 			s2 ="connect()  OK ",s22="connect() failed",
 			s3 = "closed.";
 	@Override
@@ -56,6 +58,8 @@ public class Connect extends Activity {
 		mEditDelayFrom = (EditText)findViewById(R.id.delay_from);
 		mEditDelayTo = (EditText)findViewById(R.id.delay_to);
 		mStart=(Button)findViewById(R.id.start);
+		mUnit = (Button)findViewById(R.id.unit);
+		mMethod=(Button)findViewById(R.id.method);
 		mStop = (Button)findViewById(R.id.stop);
 		mStop.setEnabled(false);
 		mStart.setOnClickListener(new View.OnClickListener() {
@@ -66,6 +70,16 @@ public class Connect extends Activity {
 		mStop.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View arg0) {
 				stopTest();
+			}
+		});
+		mUnit.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View arg0) {
+				switchUnit();
+			}
+		});
+		mMethod.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View arg0) {
+				switchMethod();
 			}
 		});
 		Intent i = this.getIntent();
@@ -83,6 +97,7 @@ public class Connect extends Activity {
 					break;
 				case SUCCESS:
 					mOkCount++;
+//					mOkCount = msg.arg1;
 					mState.setText(s1 + "\n" + s2);
 					mCountView.setText(mOkCount + " \n " + mFailedCount);
 					break;
@@ -98,6 +113,9 @@ public class Connect extends Activity {
 				case CONNECTING:
 					mState.setText(s1);
 					break;
+				case Connected:
+					mState.setText(s11);
+					break;
 				case CLOSE:
 					if(msg.arg1==0)
 						mState.setText(s1 + "\n" +s22 + "\n" + s3);	
@@ -110,10 +128,36 @@ public class Connect extends Activity {
 					break;
 				}
 			}
-
 		};
+		refreshMethod();
 	}
-
+	private void switchMethod(){
+		if(useChanel)
+			useChanel=false;
+		else
+			useChanel=true;
+		refreshMethod();
+	}
+	private void refreshMethod(){
+		if(useChanel){
+			mMethod.setText(" Chanel ");
+		}else{
+			mMethod.setText(" UUID ");
+		}
+	}
+	private void switchUnit(){
+		String unit=mUnit.getText().toString();
+		if("ms".equals(unit)){
+			mUnit.setText("s");
+		}else
+			mUnit.setText("ms");
+	}
+	boolean mUnitIsMs;
+	private boolean isUnitMs(){
+		if("ms".equals(mUnit.getText().toString()))
+			return true;
+		else return false;
+	}
 	private void resetUI(){
 		TEST_COUNT = Integer.MAX_VALUE;
 		DELAY = DEFAULT_DELAY;
@@ -123,6 +167,8 @@ public class Connect extends Activity {
 		mEditDelayFrom.setEnabled(true);
 		mEditDelayTo.setEnabled(true);
 		mEditCount.setEnabled(true);
+		mMethod.setEnabled(true);
+		mUnit.setEnabled(true);
 		mEditDelayFrom.getEditableText().clear();
 		mEditDelayTo.getEditableText().clear();
 		mEditCount.getEditableText().clear();
@@ -142,11 +188,14 @@ public class Connect extends Activity {
 		}
 		mLogView.setText("");
 		mOkCount = mFailedCount = 0;
+		mUnitIsMs = isUnitMs();
 		mHandler.sendEmptyMessage(INIT);
 		mTask = new ConnectTask();
 		mTask.start();
 		mStop.setEnabled(true);
 		mStart.setEnabled(false);
+		mMethod.setEnabled(false);
+		mUnit.setEnabled(false);
 		mEditDelayFrom.setEnabled(false);
 		mEditDelayTo.setEnabled(false);
 		mEditCount.setEnabled(false);
@@ -186,11 +235,11 @@ public class Connect extends Activity {
 			BluetoothSocket socket = null;
 
 			Log.d("sw2df", " {client}SECURE_CONNECT is "+ SECURE_CONNECT);
+			// Cancel discovery because it will slow down the connection
+			BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
 			while (runing && TEST_COUNT > 0) {
 				TEST_COUNT--;
 				socket = null;
-				// Cancel discovery because it will slow down the connection
-				BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
 				synchronized (this) {
 					//create local connsoket.
 					try {
@@ -201,54 +250,74 @@ public class Connect extends Activity {
 							int random=Math.abs(rand.nextInt());
 							r += (random) % (DELAY_TO - DELAY);
 						}
-						display(0,r+" [s]");
-                        try {					
-							wait(r * 1000);
+						if (!mUnitIsMs)
+							r *= 1000;
+						display(0, r + " [ms]");
+                        try {
+							wait(r);
                         } catch (InterruptedException e) {
                         	loge("154] InterruptedException");
-							e.printStackTrace();
                         	display(154,e.toString());
                         	break;
                         }
-						if (!SECURE_CONNECT
-								&& android.os.Build.VERSION.SDK_INT >= 10) {
-							socket = mBluetoothDevice
-									.createInsecureRfcommSocketToServiceRecord(UUID
-											.fromString(MY_UUID));
+						if (useChanel) {
+							Method m = BluetoothDevice.class.getMethod(
+									"createRfcommSocket", int.class);
+							socket = (BluetoothSocket) m.invoke(
+									mBluetoothDevice, 13);
 						} else {
 							if (!SECURE_CONNECT
-									&& android.os.Build.VERSION.SDK_INT < 10) {
-								loge("it is not a secure_connect , but SDK Level < 10, and then run secure connect");
+									&& android.os.Build.VERSION.SDK_INT >= 10) {
+								socket = mBluetoothDevice
+										.createInsecureRfcommSocketToServiceRecord(UUID
+												.fromString(MY_UUID));
+							} else {
+								if (!SECURE_CONNECT
+										&& android.os.Build.VERSION.SDK_INT < 10) {
+									loge("it is not a secure_connect , but SDK Level < 10, and then run secure connect");
+								}
+								socket = mBluetoothDevice
+										.createRfcommSocketToServiceRecord(UUID
+												.fromString(MY_UUID));
 							}
-							socket = mBluetoothDevice
-									.createRfcommSocketToServiceRecord(UUID
-											.fromString(MY_UUID));
 						}
-					    	
-						} catch (IOException ee) {
+						} catch (Exception ee) {
 							loge("164]" + ee);
-							ee.printStackTrace();
 							display(164,ee.toString());
 							break;
 					   }
 					//connect remote device.
 					int success = 1;
+					try {
+						mHandler.removeMessages(CONNECTING);
+						mHandler.sendEmptyMessage(CONNECTING);
+						loge("start connect()");
+						socket.connect();
+						mHandler.removeMessages(Connected);
+						mHandler.sendEmptyMessage(Connected);
+						loge("connect() OK ; ");
 						try {
-							mHandler.removeMessages(CONNECTING);
-							mHandler.sendEmptyMessage(CONNECTING);
-							socket.connect();
-							mHandler.removeMessages(SUCCESS);
-							mHandler.sendEmptyMessage(SUCCESS);							
+							int receive = socket.getInputStream().read();// block
+							loge("read from socket , OK. " + receive
+									+ ", write back ......");
+							Message msg = mHandler.obtainMessage(SUCCESS,
+									receive, 0);
+							msg.sendToTarget();
+							socket.getOutputStream().write(receive);
+							loge("write back OK ");
 						} catch (IOException ee) {
-							loge("176]"+ee);
-							ee.printStackTrace();
-							display(176,ee.toString());
-							success = 0;
-							break;
-						}finally{							
-							closeConnect(socket, success);
+							loge("174]read, OR write error." + ee);
+							display(174, ee.toString());
 						}
+					} catch (IOException ee) {
+						loge("176]" + ee);
+						display(176, ee.toString());
+						success = 0;
+						break;
+					} finally {
+						closeConnect(socket, success);
 					}
+				}
 				}
 			
 			mHandler.sendEmptyMessage(OVER);
@@ -263,7 +332,6 @@ public class Connect extends Activity {
 				socket.close();	
 			} catch (IOException e) {
 				loge("196]" + e.toString());
-				e.printStackTrace();
 				display(196,e.toString());
 			}
 		}

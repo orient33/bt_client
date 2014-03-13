@@ -25,7 +25,11 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/start" />
-
+                <Button android:id="@+id/method"
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    />
                 <Button
                     android:id="@+id/stop"
                     android:layout_width="0dp"
@@ -52,6 +56,12 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/hint_delay_from"
                     android:inputType="number" />
+                
+                <Button android:id="@+id/unit"
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="s"/>
                 <EditText 
                     android:id="@+id/delay_to"
                     android:layout_weight="1"
