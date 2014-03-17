@@ -1,6 +1,5 @@
 package cn.jz.bt_client;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -25,6 +24,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,6 +38,9 @@ public class Connect extends Activity {
 	static final int Connected = 13;
 	static final int CLOSE = 11;	//socket关闭
 	static final int OVER = 12; //线程结束
+	static final int LOCK = 14; //因线程等待发起lock
+	static final int CLOSING = 15;//close前的等待
+	
 	static int DEFAULT_DELAY = 1;
 	static int DELAY = DEFAULT_DELAY, DELAY_TO = -1;
 	static int TEST_COUNT=Integer.MAX_VALUE;
@@ -48,6 +51,7 @@ public class Connect extends Activity {
     private static String TCP_IP;
     private static final int CONNECT_WAIT_TIMEOUT = 4500;
 
+    private static final Object mLock = new Object();
     AlertDialog mDialog;
 	BluetoothDevice mBluetoothDevice;
 	ConnectTask mTask;
@@ -55,17 +59,17 @@ public class Connect extends Activity {
 	TextView mCountView,mLogView;
 	TextView mState;
 	EditText mEditCount,mEditDelayFrom,mEditDelayTo;
-	Button mStart,mStop,mUnit,mMethod;
+	Button mStart,mStop,mUnit,mMethod,mContinue;
 	String mac;
 	int mOkCount,mFailedCount;
 	Handler mHandler;
-	final String s1="connecting......",s11="connected , read()...",
-			s2 ="connect()  OK ",s22="connect() failed",
-			s3 = "closed.";
 	
 	private Class<?> mSystemProperties;
 	private Method mGet;
 	boolean mIsGateway;// true if on phone, false if on watch
+	CheckBox mPConnect,mPWrite,mPClose;
+	boolean mPauseConnect,mPauseWrite,mPauseClose;
+	
 	String get(String key){
 		String value="";
 		try {
@@ -95,11 +99,23 @@ public class Connect extends Activity {
 		mEditCount = (EditText)findViewById(R.id.test_count);
 		mEditDelayFrom = (EditText)findViewById(R.id.delay_from);
 		mEditDelayTo = (EditText)findViewById(R.id.delay_to);
+		mPConnect = (CheckBox)findViewById(R.id.p_connect);
+		mPWrite = (CheckBox)findViewById(R.id.p_write);
+		mPClose = (CheckBox)findViewById(R.id.p_close);
 		mStart=(Button)findViewById(R.id.start);
 		mUnit = (Button)findViewById(R.id.unit);
 		mMethod=(Button)findViewById(R.id.method);
 		mStop = (Button)findViewById(R.id.stop);
 		mStop.setEnabled(false);
+		mContinue = (Button)findViewById(R.id._continue);
+		mContinue.setEnabled(false);
+		mContinue.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View arg0) {
+				synchronized(mLock){
+					mLock.notifyAll();
+				}
+			}
+		});
 		mStart.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View arg0) {
 				startTest();
@@ -130,13 +146,11 @@ public class Connect extends Activity {
 			public void handleMessage(Message msg) {
 				switch (msg.what) {
 				case INIT:
-					mState.setText("初始化...Init");
-					mCountView.setText(" 0");
+					mCountView.setText(" 0 \n 0");
 					break;
 				case SUCCESS:
-					mOkCount++;
 //					mOkCount = msg.arg1;
-					mState.setText(s1 + "\n" + s2);
+					mState.setText("本次测试成功");
 					mCountView.setText(mOkCount + " \n " + mFailedCount);
 					break;
 				case FAILED:
@@ -149,20 +163,29 @@ public class Connect extends Activity {
 					mLogView.setText(msg.arg1 + "}" + msg.obj.toString());
 					break;
 				case CONNECTING:
-					mState.setText(s1);
+					mState.setText("连接...");
 					break;
 				case Connected:
-					mState.setText(s11);
+					mState.setText("socket连接成功,then write?");
 					break;
 				case CLOSE:
 					if(msg.arg1==0)
-						mState.setText(s1 + "\n" +s22 + "\n" + s3);	
+						mState.setText("连接失败,关闭socket");	
 					else
-						mState.setText(s1 + "\n" + s2 + "\n" + s3);
+						mState.setText("连接成功,关闭socket");
 					break;
 				case OVER:
 					resetUI();
 					Toast.makeText(Connect.this, "Connect Thread over", 1).show();
+					break;
+				case LOCK:
+					if(msg.arg1==0)
+						mContinue.setEnabled(false);
+					else
+						mContinue.setEnabled(true);
+					break;
+				case CLOSING:
+					mState.setText("then,关闭socket?");
 					break;
 				}
 			}
@@ -210,6 +233,9 @@ public class Connect extends Activity {
 		mEditCount.setEnabled(true);
 		mMethod.setEnabled(true);
 		mUnit.setEnabled(true);
+		mPConnect.setEnabled(true);
+		mPWrite.setEnabled(true);
+		mPClose.setEnabled(true);
 		mEditDelayFrom.getEditableText().clear();
 		mEditDelayTo.getEditableText().clear();
 		mEditCount.getEditableText().clear();
@@ -227,6 +253,10 @@ public class Connect extends Activity {
 			DELAY_TO = Integer.parseInt(mEditDelayTo.getEditableText().toString());
 		}catch(Exception e){
 		}
+		mPauseConnect = mPConnect.isChecked();
+		mPauseWrite = mPWrite.isChecked();
+		mPauseClose = mPClose.isChecked();
+		
 		if (useMethod == Uuid || useMethod == Chanel) {
 			mTask = new ConnectTask();
 			mTask.start();
@@ -252,6 +282,9 @@ public class Connect extends Activity {
 		mStart.setEnabled(false);
 		mMethod.setEnabled(false);
 		mUnit.setEnabled(false);
+		mPConnect.setEnabled(false);
+		mPWrite.setEnabled(false);
+		mPClose.setEnabled(false);
 		mEditDelayFrom.setEnabled(false);
 		mEditDelayTo.setEnabled(false);
 		mEditCount.setEnabled(false);	
@@ -301,11 +334,17 @@ public class Connect extends Activity {
 		super.onResume();
 	}
 
+	private boolean mExit = false;
 	@Override
 	public void onBackPressed() {
 		if ((mTask != null && mTask.isAlive())
 				|| (mTcpTask != null && mTcpTask.isAlive())) {
-			Toast.makeText(this, "连接未停，不能退出", 0).show();
+			if(mExit)
+				super.onBackPressed();
+			else{
+				mExit = true;
+				Toast.makeText(this, "连接未停，再按一下退出", 0).show();
+			}
 		} else
 			super.onBackPressed();
 	}
@@ -353,6 +392,7 @@ public class Connect extends Activity {
 			Log.d("sw2df", " {client}SECURE_CONNECT is "+ SECURE_CONNECT);
 			// Cancel discovery because it will slow down the connection
 			BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
+
 			while (runing && TEST_COUNT > 0) {
 				TEST_COUNT--;
 				socket = null;
@@ -408,37 +448,54 @@ public class Connect extends Activity {
 					try {
 						mHandler.removeMessages(CONNECTING);
 						mHandler.sendEmptyMessage(CONNECTING);
-						loge("start connect()  ");
+						logd("start connect()  ");
+						if(mPauseConnect)
+							waitSomeTime();
 						if(!mIsGateway)
 							logd("before connect()  bt_wake="+readBTwake());
 						socket.connect();
 						mHandler.removeMessages(Connected);
 						mHandler.sendEmptyMessage(Connected);
-						loge("connect() OK ; ");
-						try {
-							int receive = socket.getInputStream().read();// block
-							loge("read from socket , OK. " + receive);
-							Message msg = mHandler.obtainMessage(SUCCESS,
-									receive, 0);
-							msg.sendToTarget();
-						} catch (IOException ee) {
-							loge("174]read() error." + ee);
-							display(174, ee.toString());
-							break;
-						}
+						logd("connect() OK ; ");
+						if(mPauseWrite)
+							waitSomeTime();
+						// int receive = socket.getInputStream().read();// block
+						socket.getOutputStream().write(mOkCount);
+						socket.getOutputStream().flush();
+						logd("write to socket , OK. " + mOkCount);
 					} catch (IOException ee) {
 						loge("176]" + ee);
 						display(176, ee.toString());
 						success = 0;
 						break;
 					} finally {
-						closeConnect(socket, success);
+						mHandler.obtainMessage(CLOSING).sendToTarget();
+						if(mPauseClose)
+							waitSomeTime();
+//						closeConnect(socket, success);
 					}
 				}
+				mOkCount++;
+				Message msg = mHandler.obtainMessage(SUCCESS, mOkCount, 0);
+				msg.sendToTarget();
 				}
 			
 			mHandler.sendEmptyMessage(OVER);
 			loge("thread over================");
+		}
+		
+		private void waitSomeTime() {
+			Message msg = mHandler.obtainMessage(LOCK, 1, -1);
+			msg.sendToTarget();
+			try {
+				synchronized(mLock){
+					mLock.wait();
+				}
+			} catch (InterruptedException e) {
+				loge("Interupted, " + e.getMessage());
+			}
+			msg = mHandler.obtainMessage(LOCK, 0, -1);
+			msg.sendToTarget();
 		}
 
 		/** Will cancel the listening socket, and cause the thread to finish */

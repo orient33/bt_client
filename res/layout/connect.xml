@@ -38,12 +38,26 @@
                     android:text="@string/stop" />
             </LinearLayout>
 
-            <EditText
-                android:id="@+id/test_count"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_count"
-                android:inputType="number" />
+			<LinearLayout
+    			android:layout_width="match_parent"
+    			android:layout_height="wrap_content"
+    			android:orientation="horizontal" >
+
+    			<Button
+        			android:id="@+id/_continue"
+        			android:layout_width="0dp"
+      	  			android:layout_height="wrap_content"
+       		 		android:layout_weight="1"
+       		 		android:text="@string/_continue" />
+
+		   	 	<EditText
+        			android:id="@+id/test_count"
+        			android:layout_width="0dp"
+        			android:layout_height="wrap_content"
+        			android:layout_weight="1"
+	        		android:hint="@string/hint_count"
+    	    		android:inputType="number" />
+			</LinearLayout>
 
             <LinearLayout android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -102,6 +116,26 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@id/state" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/log"
+            android:layout_marginLeft="10dp"
+            android:orientation="vertical" >
+            <CheckBox android:id="@+id/p_connect"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="connect()"/>
+            <CheckBox android:id="@+id/p_write"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="write()"/>
+            <CheckBox android:id="@+id/p_close"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="close()"/>
+        </LinearLayout>
+
     </RelativeLayout>
 
 </ScrollView>
