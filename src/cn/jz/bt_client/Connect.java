@@ -1,5 +1,7 @@
 package cn.jz.bt_client;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -320,6 +322,25 @@ public class Connect extends Activity {
 		Process.killProcess(Process.myPid());
 	}
 
+	private char readBTwake(){
+		byte r=-1;
+		FileInputStream fis = null;
+		try{
+			fis= new FileInputStream("/proc/bluetooth/sleep/btwake");
+			fis.skip(7);
+			r = (byte)fis.read();
+		}catch(IOException e){
+			loge("read BTwake error"+e);
+		}finally{
+			try {
+				fis.close();
+			} catch (IOException e) {
+				loge("close BTwake error"+e);
+			}
+		}
+		return (char)r;
+	}
+	
 	class ConnectTask extends Thread {
 		private volatile boolean runing;
 		public ConnectTask() {
@@ -338,7 +359,7 @@ public class Connect extends Activity {
 				synchronized (this) {
 					//create local connsoket.
 					try {
-						int r = Math.max(1, DELAY);
+						int r = DELAY;
 						if (DELAY_TO > DELAY){
 							Random rand= new Random();
 							rand.setSeed(System.currentTimeMillis());
@@ -349,7 +370,8 @@ public class Connect extends Activity {
 							r *= 1000;
 						display(0, r + " [ms]");
                         try {
-							wait(r);
+                        	if(0 != r)
+                        		wait(r);
                         } catch (InterruptedException e) {
                         	loge("154] InterruptedException");
                         	display(154,e.toString());
@@ -386,20 +408,21 @@ public class Connect extends Activity {
 					try {
 						mHandler.removeMessages(CONNECTING);
 						mHandler.sendEmptyMessage(CONNECTING);
-						loge("start connect()");
+						loge("start connect()  ");
+						if(!mIsGateway)
+							logd("before connect()  bt_wake="+readBTwake());
 						socket.connect();
 						mHandler.removeMessages(Connected);
 						mHandler.sendEmptyMessage(Connected);
 						loge("connect() OK ; ");
 						try {
 							int receive = socket.getInputStream().read();// block
-							loge("read from socket , OK. " + receive
-									+ ", write back ......");
+							loge("read from socket , OK. " + receive);
 							Message msg = mHandler.obtainMessage(SUCCESS,
 									receive, 0);
 							msg.sendToTarget();
-							socket.getOutputStream().write(receive);
-							loge("write back OK ");
+//							socket.getOutputStream().write(receive);
+//							loge("write back OK ");
 						} catch (IOException ee) {
 							loge("174]read, OR write error." + ee);
 							display(174, ee.toString());
@@ -454,7 +477,7 @@ public class Connect extends Activity {
 				BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
 				synchronized (this) {
 					//create local connsoket.
-						int r = Math.max(1, DELAY);
+						int r = DELAY;
 						if (DELAY_TO > DELAY){
 							Random rand= new Random();
 							rand.setSeed(System.currentTimeMillis());
@@ -465,7 +488,8 @@ public class Connect extends Activity {
 							r *= 1000;
 						display(0, r + " [ms]");
                         try {
-							wait(r);
+                        	if(0 != r)
+                        		wait(r);
                         } catch (InterruptedException e) {
                         	loge("3840] InterruptedException");
                         	display(3840,e.toString());
