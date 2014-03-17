@@ -421,11 +421,10 @@ public class Connect extends Activity {
 							Message msg = mHandler.obtainMessage(SUCCESS,
 									receive, 0);
 							msg.sendToTarget();
-//							socket.getOutputStream().write(receive);
-//							loge("write back OK ");
 						} catch (IOException ee) {
-							loge("174]read, OR write error." + ee);
+							loge("174]read() error." + ee);
 							display(174, ee.toString());
+							break;
 						}
 					} catch (IOException ee) {
 						loge("176]" + ee);
