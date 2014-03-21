@@ -152,6 +152,7 @@ public class Connect extends Activity {
 //					mOkCount = msg.arg1;
 					mState.setText("本次测试成功");
 					mCountView.setText(mOkCount + " \n " + mFailedCount);
+					logd("success count: "+mOkCount);
 					break;
 				case FAILED:
 					if(0==msg.arg1){
@@ -161,6 +162,7 @@ public class Connect extends Activity {
 					mFailedCount++;
 					mCountView.setText(mOkCount + " \n " + mFailedCount);
 					mLogView.setText(msg.arg1 + "}" + msg.obj.toString());
+					logd("fail count: "+mFailedCount);
 					break;
 				case CONNECTING:
 					mState.setText("连接...");
@@ -453,16 +455,18 @@ public class Connect extends Activity {
 							waitSomeTime();
 						if(!mIsGateway)
 							logd("before connect()  bt_wake="+readBTwake());
-						socket.connect();
-						mHandler.removeMessages(Connected);
-						mHandler.sendEmptyMessage(Connected);
-						logd("connect() OK ; ");
-						if(mPauseWrite)
-							waitSomeTime();
-						// int receive = socket.getInputStream().read();// block
-						socket.getOutputStream().write(mOkCount);
-						socket.getOutputStream().flush();
-						logd("write to socket , OK. " + mOkCount);
+						if (reConnect(socket, 5)) {
+							mHandler.removeMessages(Connected);
+							mHandler.sendEmptyMessage(Connected);
+							logd("connect() OK ; ");
+							if (mPauseWrite)
+								waitSomeTime();
+							// int receive = socket.getInputStream().read();
+							socket.getOutputStream().write(mOkCount);
+							socket.getOutputStream().flush();
+							logd("write to socket , OK. "/* + mOkCount */);
+						}else
+							break;
 					} catch (IOException ee) {
 						loge("176]" + ee);
 						display(176, ee.toString());
@@ -472,16 +476,33 @@ public class Connect extends Activity {
 						mHandler.obtainMessage(CLOSING).sendToTarget();
 						if(mPauseClose)
 							waitSomeTime();
-//						closeConnect(socket, success);
+						closeConnect(socket, success);
 					}
 				}
 				mOkCount++;
+				//logd("connect & write OK, success count is "+mOkCount);
 				Message msg = mHandler.obtainMessage(SUCCESS, mOkCount, 0);
 				msg.sendToTarget();
 				}
 			
 			mHandler.sendEmptyMessage(OVER);
 			loge("thread over================");
+		}
+		
+		private boolean reConnect(BluetoothSocket socket, int count) {
+			int i = 0;
+			while (i < count) {
+				if (i > 0)
+					logd("reConnect. retry-time : " + i);
+				try {
+					socket.connect();
+					return true;
+				} catch (IOException e) {
+					loge("499]] reConnect [" + i + "] ," + e.getMessage());
+				}
+				i++;
+			}
+			return false;
 		}
 		
 		private void waitSomeTime() {
@@ -501,12 +522,20 @@ public class Connect extends Activity {
 		/** Will cancel the listening socket, and cause the thread to finish */
 		public void closeConnect(BluetoothSocket socket, int success) {
 			try {
-				Message msg=mHandler.obtainMessage(CLOSE, success, 0);
-				msg.sendToTarget();
-				socket.close();	
-			} catch (IOException e) {
-				loge("196]" + e.toString());
-				display(196,e.toString());
+//				socket.getInputStream().read();
+				logd("read 1 byte");
+				Thread.sleep(1000);
+			} catch (Exception ee) {
+				loge("read/sleep  error:" + ee.getMessage());
+			} finally {
+				try {
+					Message msg = mHandler.obtainMessage(CLOSE, success, 0);
+					msg.sendToTarget();
+					socket.close();
+				} catch (IOException e) {
+					loge("196]" + e.toString());
+					display(196, e.toString());
+				}
 			}
 		}
 	
